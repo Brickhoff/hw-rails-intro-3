@@ -12,25 +12,52 @@ class MoviesController < ApplicationController
 
   def index
     
+    new_uri = false
+    
     @all_ratings = Movie.get_all_ratings
     @selected_ratings = params[:ratings]
     
     if(@selected_ratings != nil)
-      @selected_ratings = params[:ratings].keys
+      if(@selected_ratings.is_a?(Hash))
+        @selected_ratings = params[:ratings].keys
+      end
+      session[:sesh] = @selected_ratings
       @movies = Movie.where({rating: @selected_ratings})
     else
-      @selected_ratings = @all_ratings
+      if(session[:sesh] != nil)
+        @selected_ratings = session[:sesh]
+        @movies = Movie.where({rating: @selected_ratings})
+        new_uri = true
+      else
+        @movies = Movie.all
+        @selected_ratings = @all_ratings
+      end
     end
     
-    # User.where({ name: "Joe", email: "joe@example.com" })
+    @sort_type = params[:sort_type]
+    if(@sort_type != nil)
+      session[:sort] = @sort_type
+      if (@sort_type == "title")
+        @movies = @movies.order(:title)
+      elsif (@sort_type == "date")
+        @movies = @movies.order(:release_date)
+      end
+    else
+      if(session[:sort] != nil)
+        @sort_type = session[:sort]
+        new_uri = true
+        if (@sort_type == "title")
+          @movies = @movies.order(:title)
+        elsif (@sort_type == "date")
+          @movies = @movies.order(:release_date)
+        end
+      end
+    end
     
-    
-    if (params[:sort_type] == "title")
-      @sort_type = "title"
-      @movies = Movie.order(:title)
-    elsif (params[:sort_type] == "date")
-      @sort_type = "date"
-      @movies = Movie.order(:release_date)
+    if(new_uri)
+      session.clear
+      flash.keep
+      redirect_to movies_path(ratings: @selected_ratings, sort_type: @sort_type)
     end
   end
 
